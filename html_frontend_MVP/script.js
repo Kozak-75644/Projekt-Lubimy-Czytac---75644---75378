@@ -1,5 +1,5 @@
 // server's URL 
-const API_URL = 'https://bohdanmelch.pythonanywhere.com/'; 
+const API_URL = 'https://bohdanmelch.pythonanywhere.com/books'; 
 
 document.addEventListener('DOMContentLoaded', () => {
     const bookForm = document.getElementById('add-book-form');
