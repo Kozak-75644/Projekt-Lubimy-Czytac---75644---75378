@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h3>${book.title}</h3>
                     <p><strong>Author:</strong> ${book.author}</p>
                     <button onclick="showDetails('${book.title}', '${book.author}', '${book.genre}', ${book.rating})">View Details</button>
+                    <button onclick="deleteBook(${book.id})" style="background-color: #e74c3c; margin-left: 10px;">Delete</button>
                 `;
                 booksListContainer.appendChild(bookElement);
             });
@@ -86,4 +87,24 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.setCustomValidity('');
         });
     });
+    window.deleteBook = async function(bookId) {
+
+        if (!confirm('Are you sure you want to delete this book?')) {
+            return;
+        }
+        try {
+            const response = await fetch(`${API_URL}/${bookId}`, {
+                method: 'DELETE'
+            });
+            if (response.ok) {
+                fetchBooks();
+            } else {
+                console.error('Failed to delete book on the server');
+                alert('Failed to delete book.');
+            }
+        } catch (error) {
+            console.error('Connection error while deleting:', error);
+            alert('Connection error. Server might be down.');
+        }
+    };
 });
