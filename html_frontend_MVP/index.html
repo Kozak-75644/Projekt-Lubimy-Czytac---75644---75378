@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LubimyCzytać - Project</title>
+</head>
+<body>
+
+    <header>
+        <h1>My Library</h1>
+    </header>
+
+    <main>
+        <section id="add-book-section">
+            <h2>Add a New Book</h2>
+            <form id="add-book-form">
+                <div>
+                    <label for="title">Book Title:</label>
+                    <input type="text" id="title" name="title" required>
+                </div>
+                
+                <div>
+                    <label for="author">Author:</label>
+                    <input type="text" id="author" name="author" required>
+                </div>
+
+                <div>
+                    <label for="genre">Genre:</label>
+                    <input type="text" id="genre" name="genre">
+                </div>
+
+                <div>
+                    <label for="rating">Rating (0-10):</label>
+                    <input type="number" id="rating" name="rating" min="0" max="10" value="0">
+                </div>
+
+                <button type="submit">Add to List</button>
+            </form>
+        </section>
+
+        <hr>
+
+        <section id="library-section">
+            <h2>Book List</h2>
+            <div id="books-list">
+                <p>Loading books...</p>
+            </div>
+        </section>
+
+        <hr>
+
+        <section id="book-details-section" style="display: none;">
+            <h2>Book Details</h2>
+            <div id="book-details-content">
+                </div>
+            <button id="close-details">Close Details</button>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
