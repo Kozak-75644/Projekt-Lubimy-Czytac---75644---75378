@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     closeDetailsBtn.addEventListener('click', () => {
         detailsSection.style.display = 'none';
     });
-    window.showDetails = function(title, author, genre, rating) {
+    window.showDetails = function(title, author, genre, rating, imageURL) {
         detailsContent.innerHTML = `
              ${imageURL ? `<img src="${imageURL}" alt="Book cover" style="max-width: 100%; max-height: 200px; border-radius: 5px; margin-bottom: 15px;">` : ''}
             <p><strong>Title:</strong> ${title}</p>
