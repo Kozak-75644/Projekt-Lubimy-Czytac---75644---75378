@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     window.showDetails = function(title, author, genre, rating, imageURL) {
         detailsContent.innerHTML = `
-             ${imageURL ? `<img src="${imageURL}" alt="Book cover" style="max-width: 100%; max-height: 200px; border-radius: 5px; margin-bottom: 15px;">` : ''}
+             ${imageURL ? `<img src="${imageURL}" alt="Book cover" style="max-width: 100%; max-height: 100%; border-radius: 5px; margin-bottom: 15px;">` : ''}
             <p><strong>Title:</strong> ${title}</p>
             <p><strong>Author:</strong> ${author}</p>
             <p><strong>Genre:</strong> ${genre || 'Not specified'}</p>
