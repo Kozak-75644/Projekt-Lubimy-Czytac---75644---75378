@@ -121,8 +121,8 @@ hr {
 }
 
 .book-cover {
-    width: 100%;
-    height: 200px;
+    width: 70%;
+    height: 70%;
     object-fit: cover; 
     border-radius: 4px;
     margin-bottom: 10px;
