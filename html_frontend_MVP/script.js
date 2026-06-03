@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
     closeDetailsBtn.addEventListener('click', () => { detailsSection.style.display = 'none'; });
 
   
-    window.showDetails = async function(id, title, author, genre, rating, imageURL) {
+   window.showDetails = async function(id, title, author, genre, rating, imageURL) {
         detailsContent.innerHTML = '<p>Loading details...</p>';
         detailsSection.style.display = 'block';
 
@@ -152,21 +152,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let addCommentHTML = '';
         if (currentUserId) {
-            document.getElementById('add-comment-form').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const content = document.getElementById('new-comment-text').value;
-                await fetch(`${API_URL}/books/${id}/comments`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ 
-                        content: content,
-                        user_id: currentUserId
-                    })
-                });
-                showDetails(id, title, author, genre, rating, imageURL); 
-            });
+            addCommentHTML = `
+                <form id="add-comment-form">
+                    <textarea id="new-comment-text" placeholder="Write your review here..." required></textarea>
+                    <button type="submit">Submit Review</button>
+                </form>`;
+        } else {
+            addCommentHTML = `<p style="color: #e74c3c; font-weight: bold;">Log in to leave a review.</p>`;
         }
-    };
 
         detailsContent.innerHTML = `
              ${imageURL && imageURL !== 'undefined' ? `<img src="${imageURL}" alt="Book cover" style="max-width: 100%; max-height: 200px; border-radius: 5px; margin-bottom: 15px;">` : ''}
@@ -187,7 +180,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 await fetch(`${API_URL}/books/${id}/comments`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ content: content })
+                    body: JSON.stringify({ 
+                        content: content,
+                        user_id: currentUserId
+                    })
                 });
                 showDetails(id, title, author, genre, rating, imageURL); 
             });
