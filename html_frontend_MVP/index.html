@@ -13,7 +13,8 @@
         <div id="auth-controls">
             <button id="login-btn-main">Log In</button>
             <div id="user-info" style="display: none;">
-                <span style="margin-right: 15px; font-weight: bold;">User Mode</span>
+                <span id="user-name-display" style="margin-right: 15px; font-weight: bold;">User Mode</span>
+                <button id="profile-btn" style="background-color: #649ad8; margin-right: 10px; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">My Profile</button>
                 <button id="logout-btn" style="background-color: #e74c3c;">Log Out</button>
             </div>
         </div>
@@ -88,6 +89,7 @@
 
             <form id="register-form" style="display: none;">
                 <h2>Create Account</h2>
+                <input type="text" id="reg-username" placeholder="Username" required>
                 <input type="email" id="reg-email" placeholder="Email" required>
                 <input type="password" id="reg-password" placeholder="Password" required>
                 <button type="submit" style="margin-top: 10px;">Create Account</button>
@@ -95,6 +97,13 @@
             </form>
         </div>
         </div>
+    <div id="profile-modal" style="display: none;">
+        <div id="profile-modal-content">
+            <span id="close-profile">&times;</span>
+            <h2>My Profile</h2>
+            <div id="profile-info">Loading...</div>
+        </div>
+    </div>
     <script src="script.js"></script>
 </body>
 </html>
