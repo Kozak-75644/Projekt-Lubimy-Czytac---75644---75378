@@ -6,29 +6,38 @@ import sqlite3
 app = Flask(__name__)
 CORS(app)
 
-# Funkcja nawiązująca połączenie z bazą danych
 def get_db_connection():
     conn = sqlite3.connect('books.db')
     conn.row_factory = sqlite3.Row
+    conn.execute('PRAGMA foreign_keys = ON')
     return conn
 
-# Inicjalizacja bazy danych 
+# Inicjalizacja zaktualizowanej bazy danych
 def init_db():
     conn = get_db_connection()
 
+    # Nowa tabela autorów
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS authors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL
+        )
+    ''')
+
+    # Tabela książek zaktualizowana o klucz obcy (author_id zamiast tekstowego author)
     conn.execute('''
         CREATE TABLE IF NOT EXISTS books (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
-            author TEXT NOT NULL,
+            author_id INTEGER NOT NULL,
             genre TEXT,
             rating INTEGER,
             image TEXT,
-            description TEXT
+            description TEXT,
+            FOREIGN KEY (author_id) REFERENCES authors (id)
         )
     ''')
 
-    # Tabela użytkowników z nową kolumną 'role' do autoryzacji
     conn.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -95,7 +104,6 @@ def login():
     conn.close()
 
     if user and check_password_hash(user['password_hash'], password):
-        # Zwracanie roli użytkownika do frontendu
         return jsonify({
             'message': 'Zalogowano', 
             'user_id': user['id'], 
@@ -127,42 +135,87 @@ def get_user_profile(user_id):
         'created_at': user['created_at'],
         'role': user['role'],
         'comments_count': len(comments),
-        'comments': [{'id': c['id'], 'content': c['content'], 'book_title': c['book_title']} for c in comments]
+        'comments': [dict(c) for c in comments]
     }
     return jsonify(profile_data)
 
+# --- ENDPOINTY AUTORÓW ---
+
+# Pobieranie listy wszystkich autorów
+@app.route('/authors', methods=['GET'])
+def get_authors():
+    conn = get_db_connection()
+    authors = conn.execute('SELECT * FROM authors').fetchall()
+    conn.close()
+    return jsonify([dict(a) for a in authors])
+
+# Pobieranie szczegółów autora wraz z przypisanymi do niego książkami
+@app.route('/authors/<int:author_id>', methods=['GET'])
+def get_author_details(author_id):
+    conn = get_db_connection()
+    author = conn.execute('SELECT * FROM authors WHERE id = ?', (author_id,)).fetchone()
+    
+    if not author:
+        conn.close()
+        return jsonify({'error': 'Autor nie znaleziony'}), 404
+        
+    books = conn.execute('SELECT id, title, genre, image FROM books WHERE author_id = ?', (author_id,)).fetchall()
+    conn.close()
+    
+    return jsonify({
+        'author_name': author['name'],
+        'books': [dict(b) for b in books]
+    })
+
+
 # --- ENDPOINTY KSIĄŻEK ---
 
-# Endpoint wyszukiwarki książek
 @app.route('/books/search', methods=['GET'])
 def search_books():
     query = request.args.get('q', '')
     conn = get_db_connection()
-    # Wyszukiwanie z użyciem operatora LIKE w tytule lub autorze
-    books = conn.execute(
-        'SELECT * FROM books WHERE title LIKE ? OR author LIKE ?',
-        (f'%{query}%', f'%{query}%')
-    ).fetchall()
+    # Połączenie tabel w celu wyszukiwania również po nazwie autora
+    books = conn.execute('''
+        SELECT books.*, authors.name as author 
+        FROM books 
+        JOIN authors ON books.author_id = authors.id
+        WHERE books.title LIKE ? OR authors.name LIKE ?
+    ''', (f'%{query}%', f'%{query}%')).fetchall()
     conn.close()
     
-    books_list = [dict(book) for book in books]
-    return jsonify(books_list)
+    return jsonify([dict(book) for book in books])
 
 @app.route('/books', methods=['GET'])
 def get_books():
     conn = get_db_connection()
-    books = conn.execute('SELECT * FROM books').fetchall()
+    # Pobieranie nazwy autora dzięki relacji (JOIN)
+    books = conn.execute('''
+        SELECT books.*, authors.name as author 
+        FROM books 
+        JOIN authors ON books.author_id = authors.id
+    ''').fetchall()
     conn.close()
     return jsonify([dict(book) for book in books])
 
 @app.route('/books', methods=['POST'])
 def add_book():
     new_book = request.get_json()
+    author_name = new_book.get('author')
+    
     conn = get_db_connection()
+    
+    # Automatyczne dodanie autora, jeśli nie istnieje w tabeli 'authors'
+    author = conn.execute('SELECT id FROM authors WHERE name = ?', (author_name,)).fetchone()
+    if author:
+        author_id = author['id']
+    else:
+        cursor = conn.execute('INSERT INTO authors (name) VALUES (?)', (author_name,))
+        author_id = cursor.lastrowid
+        
     conn.execute(
-        'INSERT INTO books (title, author, genre, rating, image, description) VALUES (?, ?, ?, ?, ?, ?)', 
+        'INSERT INTO books (title, author_id, genre, rating, image, description) VALUES (?, ?, ?, ?, ?, ?)', 
         (
-            new_book.get('title'), new_book.get('author'), new_book.get('genre', ''), 
+            new_book.get('title'), author_id, new_book.get('genre', ''), 
             new_book.get('rating', 0), new_book.get('image', ''), new_book.get('description', '')
         )
     )
@@ -170,17 +223,27 @@ def add_book():
     conn.close()
     return jsonify({'message': 'Created'}), 201
 
-# Nowy endpoint do edycji książki
 @app.route('/books/<int:id>', methods=['PUT'])
 def update_book(id):
     data = request.get_json()
+    author_name = data.get('author')
+    
     conn = get_db_connection()
+    
+    # Wyszukiwanie lub tworzenie nowego autora przy edycji
+    author = conn.execute('SELECT id FROM authors WHERE name = ?', (author_name,)).fetchone()
+    if author:
+        author_id = author['id']
+    else:
+        cursor = conn.execute('INSERT INTO authors (name) VALUES (?)', (author_name,))
+        author_id = cursor.lastrowid
+
     conn.execute(
         '''UPDATE books 
-           SET title = ?, author = ?, genre = ?, rating = ?, image = ?, description = ? 
+           SET title = ?, author_id = ?, genre = ?, rating = ?, image = ?, description = ? 
            WHERE id = ?''', 
         (
-            data.get('title'), data.get('author'), data.get('genre', ''), 
+            data.get('title'), author_id, data.get('genre', ''), 
             data.get('rating', 0), data.get('image', ''), data.get('description', ''), id
         )
     )
@@ -188,7 +251,6 @@ def update_book(id):
     conn.close()
     return jsonify({'message': 'Zaktualizowano książkę'})
 
-# Aktualizacja usuwania: Weryfikacja uprawnień administratora
 @app.route('/books/<int:id>', methods=['DELETE'])
 def delete_book(id):
     data = request.get_json(silent=True) or {}
@@ -200,7 +262,6 @@ def delete_book(id):
     conn = get_db_connection()
     user = conn.execute('SELECT role FROM users WHERE id = ?', (user_id,)).fetchone()
     
-    # Blokada dostępu dla zwykłych użytkowników
     if not user or user['role'] != 'admin':
         conn.close()
         return jsonify({'error': 'Brak uprawnień admina'}), 403
