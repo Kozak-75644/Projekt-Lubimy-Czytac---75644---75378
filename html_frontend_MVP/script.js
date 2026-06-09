@@ -107,9 +107,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (response.ok) { bookForm.reset(); fetchBooks(); }
     });
 
+   document.getElementById('search-bar').addEventListener('input', async (e) => {
+        const query = e.target.value;
+        const url = query ? `${API_URL}/books/search?q=${encodeURIComponent(query)}` : `${API_URL}/books`;
+        const response = await fetch(url);
+        const books = await response.json();
+        renderBooks(books);
+    });
+
     async function fetchBooks() {
         const response = await fetch(`${API_URL}/books`);
         const books = await response.json();
+        renderBooks(books);
+    }
+
+    function renderBooks(books) {
         booksListContainer.innerHTML = ''; 
         if (books.length === 0) { booksListContainer.innerHTML = '<p>No books available.</p>'; return; }
         
@@ -120,9 +132,12 @@ document.addEventListener('DOMContentLoaded', () => {
             bookElement.innerHTML = `
                  ${book.image ? `<img src="${book.image}" alt="Book cover" class="book-cover">` : ''}
                 <h3>${book.title}</h3>
-                <p><strong>Author:</strong> ${book.author}</p>
+                <p><strong>Author:</strong> <a href="#" onclick="showAuthor(${book.author_id}); return false;" style="color: #3498db; text-decoration: none; font-weight: bold;">${book.author}</a></p>
                 <button onclick="showDetails(${book.id}, '${book.title.replace(/'/g, "\\'")}', '${book.author.replace(/'/g, "\\'")}', '${book.genre}', ${book.rating}, '${book.image}')">View Details</button>
-                ${userRole === 'admin' ? `<button onclick="deleteBook(${book.id})" style="background-color: #e74c3c; margin-left: 10px;">Delete</button>` : ''}
+                ${userRole === 'admin' ? `
+                    <button onclick="openEditModal(${book.id}, '${book.title.replace(/'/g, "\\'")}', '${book.author.replace(/'/g, "\\'")}', '${book.genre}', ${book.rating}, '${book.image}')" style="background-color: #f39c12; margin-left: 5px;">Edit</button>
+                    <button onclick="deleteBook(${book.id})" style="background-color: #e74c3c; margin-left: 5px;">Delete</button>
+                ` : ''}
             `;
             booksListContainer.appendChild(bookElement);
         });
@@ -243,4 +258,53 @@ const profileModal = document.getElementById('profile-modal');
         }
     };
     document.getElementById('close-profile').onclick = () => profileModal.style.display = 'none';
+    window.showAuthor = async function(authorId) {
+        document.getElementById('author-modal').style.display = 'block';
+        document.getElementById('author-books-list').innerHTML = '<p>Loading...</p>';
+        try {
+            const res = await fetch(`${API_URL}/authors/${authorId}`);
+            const data = await res.json();
+            document.getElementById('author-name-title').innerText = data.author_name;
+            let html = '<h4>Books in our library:</h4><ul>';
+            data.books.forEach(b => {
+                html += `<li><strong>${b.title}</strong> <span style="color: #7f8c8d;">(${b.genre || 'N/A'})</span></li>`;
+            });
+            html += '</ul>';
+            document.getElementById('author-books-list').innerHTML = html;
+        } catch (e) {
+            document.getElementById('author-books-list').innerHTML = '<p>Connection error.</p>';
+        }
+    };
+    document.getElementById('close-author').onclick = () => document.getElementById('author-modal').style.display = 'none';
+    window.openEditModal = function(id, title, author, genre, rating, image) {
+        document.getElementById('edit-modal').style.display = 'block';
+        document.getElementById('edit-id').value = id;
+        document.getElementById('edit-title').value = title;
+        document.getElementById('edit-author').value = author;
+        document.getElementById('edit-genre').value = genre;
+        document.getElementById('edit-rating').value = rating;
+        document.getElementById('edit-image').value = image !== 'undefined' ? image : '';
+    };
+    document.getElementById('close-edit').onclick = () => document.getElementById('edit-modal').style.display = 'none';
+
+    document.getElementById('edit-book-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit-id').value;
+        const updatedBook = {
+            title: document.getElementById('edit-title').value,
+            author: document.getElementById('edit-author').value,
+            genre: document.getElementById('edit-genre').value,
+            rating: parseInt(document.getElementById('edit-rating').value) || 0,
+            image: document.getElementById('edit-image').value
+        };
+        const response = await fetch(`${API_URL}/books/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedBook)
+        });
+        if (response.ok) {
+            document.getElementById('edit-modal').style.display = 'none';
+            fetchBooks(); 
+        }
+    });
 });
